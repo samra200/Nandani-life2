@@ -6,17 +6,57 @@
 
 
 <style>
-body { font-family: Arial; text-align: center; margin: 20px; }
-input, button { padding: 10px; margin: 5px; text-transform: uppercase; }
-.table-container { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; margin-top: 20px; min-width: 700px; }
-th, td { border: 1px solid black; padding: 8px; }
-th { background: #f4f4f4; }
-.total-box { margin-top: 10px; font-weight: bold; }
+body{
+font-family:Arial;
+text-align:center;
+margin:20px;
+}
+
+
+input,button{
+padding:10px;
+margin:5px;
+text-transform:uppercase;
+}
+
+
+.table-container{
+overflow-x:auto;
+}
+
+
+table{
+width:100%;
+min-width:700px;
+border-collapse:collapse;
+margin-top:20px;
+}
+
+
+th,td{
+border:1px solid black;
+padding:8px;
+}
+
+
+th{
+background:#f4f4f4;
+}
+
+
+.total-box{
+margin-top:12px;
+font-weight:bold;
+}
+
+
+@media(max-width:600px){
+input,button{
+width:90%;
+}
+}
 </style>
 </head>
-
-
 <body>
 
 
@@ -52,14 +92,28 @@ th { background: #f4f4f4; }
 <br><br>
 
 
-<input type="text" id="searchInput" placeholder="Search..." onkeyup="renderTable()">
-<input type="date" id="fromDate" onchange="renderTable()">
-<input type="date" id="toDate" onchange="renderTable()">
+<input type="text"
+id="searchInput"
+placeholder="Search..."
+onkeyup="renderTable()">
+
+
+<input type="date"
+id="fromDate"
+onchange="renderTable()">
+
+
+<input type="date"
+id="toDate"
+onchange="renderTable()">
 
 
 <div class="total-box">
-Total (All): <span id="totalAll">0</span> |
-Total (Filtered): <span id="totalFiltered">0</span>
+Total (All):
+<span id="totalAll">0</span>
+|
+Total (Filtered):
+<span id="totalFiltered">0</span>
 </div>
 
 
@@ -81,261 +135,478 @@ Total (Filtered): <span id="totalFiltered">0</span>
 
 
 <script>
-const PASSWORD = "samra3532";
 
 
-// base village order
-const villageOrder = [
-"MUNDRA","SADAU","KAPAYA","BAROI","VANDH",
-"GOYAR","SHEKHADIYA","LUNI","RAGA",
-"HAMIRAMORA","MANGRA","BORANA"
+const PASSWORD="samra3532";
+
+
+const villageOrder=[
+"MUNDRA",
+"SADAU",
+"KAPAYA",
+"BAROI",
+"VANDH",
+"GOYAR",
+"SHEKHADIYA",
+"LUNI",
+"RAGA",
+"HAMIRAMORA",
+"MANGRA",
+"BORANA"
 ];
 
 
-// dynamic list for dropdown
-let villageListData = [...villageOrder];
+let villageListData=[...villageOrder];
 
 
-// load village dropdown
-function loadVillageList() {
-    let list = document.getElementById("villageList");
-    list.innerHTML = "";
-    villageListData.forEach(v => {
-        let opt = document.createElement("option");
-        opt.value = v;
-        list.appendChild(opt);
-    });
+function loadVillageList(){
+let list=document.getElementById("villageList");
+list.innerHTML="";
+
+
+villageListData.forEach(v=>{
+let opt=document.createElement("option");
+opt.value=v;
+list.appendChild(opt);
+});
 }
 
 
-// date
-function getToday() {
-    let d = new Date();
-    return d.toISOString().split('T')[0];
+function getToday(){
+let d=new Date();
+let y=d.getFullYear();
+let m=String(d.getMonth()+1).padStart(2,'0');
+let day=String(d.getDate()).padStart(2,'0');
+return `${y}-${m}-${day}`;
 }
 
 
-window.onload = () => {
-    let today = getToday();
-    dateInput.value = today;
-    fromDate.value = today;
-    toDate.value = today;
-    loadVillageList();
-    renderTable();
+window.onload=function(){
+let today=getToday();
+
+
+document.getElementById("dateInput").value=today;
+document.getElementById("fromDate").value=today;
+document.getElementById("toDate").value=today;
+
+
+loadVillageList();
+renderTable();
 };
 
 
-function getData() {
-    return JSON.parse(localStorage.getItem("dataList")) || [];
+function getData(){
+return JSON.parse(
+localStorage.getItem("dataList")
+)||[];
 }
 
 
-function saveData(data) {
-    localStorage.setItem("dataList", JSON.stringify(data));
+function saveData(data){
+localStorage.setItem(
+"dataList",
+JSON.stringify(data)
+);
 }
 
 
-// sort logic
-function sortData(data) {
-    return data.sort((a,b) => {
-        if (a[0] !== b[0]) return a[0].localeCompare(b[0]);
+function sortData(data){
 
 
-        let vA = villageOrder.indexOf(a[1]);
-        let vB = villageOrder.indexOf(b[1]);
+return data.sort((a,b)=>{
 
 
-        if (vA === -1) vA = 999;
-        if (vB === -1) vB = 999;
-
-
-        if (vA !== vB) return vA - vB;
-
-
-        return Number(a[3]) - Number(b[3]);
-    });
+if(a[0]!==b[0]){
+return a[0].localeCompare(b[0]);
 }
 
 
-// filter
-function getFilteredData() {
-    let data = sortData(getData());
+let va=villageOrder.indexOf(a[1]);
+let vb=villageOrder.indexOf(b[1]);
 
 
-    let search = searchInput.value.toLowerCase();
-    let from = fromDate.value;
-    let to = toDate.value;
+if(va===-1) va=999;
+if(vb===-1) vb=999;
 
 
-    return data.filter(row => {
-        let text = row.join(" ").toLowerCase();
-
-
-        if (search && !text.includes(search)) return false;
-        if (from && row[0] < from) return false;
-        if (to && row[0] > to) return false;
-
-
-        return true;
-    });
+if(va!==vb){
+return va-vb;
 }
 
 
-// add
-function addData() {
-    let data = getData();
+return Number(a[3])-Number(b[3]);
 
 
-    let village = villageInput.value.toUpperCase();
-
-
-    let row = [
-        dateInput.value,
-        village,
-        weightInput.value,
-        receiptInput.value,
-        carInput.value.toUpperCase()
-    ];
-
-
-    if (row.some(v => !v)) {
-        alert("All fields required");
-        return;
-    }
-
-
-    if (data.some(r => r[3] === row[3])) {
-        alert("Duplicate receipt!");
-        return;
-    }
-
-
-    // add new village at end
-    if (!villageListData.includes(village)) {
-        villageListData.push(village);
-        loadVillageList();
-    }
-
-
-    data.push(row);
-    saveData(data);
-
-
-    villageInput.value = "";
-    weightInput.value = "";
-    receiptInput.value = "";
-    carInput.value = "";
-
-
-    renderTable();
+});
 }
 
 
-// render
-function renderTable() {
-    let table = dataList;
-    table.innerHTML = "";
+function getFilteredData(){
 
 
-    let filtered = getFilteredData();
+let data=sortData(getData());
 
 
-    filtered.forEach((row,index) => {
-        let tr = document.createElement("tr");
+let search=document
+.getElementById("searchInput")
+.value
+.toLowerCase();
 
 
-        row.forEach(cell => {
-            let td = document.createElement("td");
-            td.textContent = cell;
-            tr.appendChild(td);
-        });
+let from=document
+.getElementById("fromDate")
+.value;
 
 
-        let action = document.createElement("td");
-        action.innerHTML = `
-            <button onclick="editRow(${index})">Edit</button>
-            <button onclick="deleteRow(${index})">Delete</button>
-        `;
-        tr.appendChild(action);
+let to=document
+.getElementById("toDate")
+.value;
 
 
-        table.appendChild(tr);
-    });
+return data.filter(row=>{
 
 
-    updateTotal();
+let text=row.join(" ").toLowerCase();
+
+
+if(search && !text.includes(search))
+return false;
+
+
+if(from && row[0] < from)
+return false;
+
+
+if(to && row[0] > to)
+return false;
+
+
+return true;
+
+
+});
+
+
 }
 
 
-// totals
-function updateTotal() {
-    let all = getData();
-    let filtered = getFilteredData();
+function addData(){
 
 
-    let totalAll = all.reduce((s,r)=>s+Number(r[2]||0),0);
-    let totalFiltered = filtered.reduce((s,r)=>s+Number(r[2]||0),0);
+let data=getData();
 
 
-    totalAllEl.innerText = totalAll;
-    totalFilteredEl.innerText = totalFiltered + " | Entries: " + filtered.length;
+let village=document
+.getElementById("villageInput")
+.value
+.toUpperCase();
+
+
+let row=[
+document.getElementById("dateInput").value,
+village,
+document.getElementById("weightInput").value,
+document.getElementById("receiptInput").value,
+document.getElementById("carInput").value.toUpperCase()
+];
+
+
+if(row.some(v=>!v)){
+alert("All fields required");
+return;
 }
 
 
-// delete
-function deleteRow(index) {
-    verifyPassword(() => {
-        let filtered = getFilteredData();
-        let data = getData();
-
-
-        let row = filtered[index];
-        let realIndex = data.findIndex(r => JSON.stringify(r) === JSON.stringify(row));
-
-
-        data.splice(realIndex,1);
-        saveData(data);
-        renderTable();
-    });
+if(data.some(r=>r[3]===row[3])){
+alert("Duplicate receipt!");
+return;
 }
 
 
-// password
-function verifyPassword(cb) {
-    let p = prompt("Enter password:");
-    if (p === PASSWORD) cb();
-    else alert("Wrong password");
+if(!villageListData.includes(village)){
+villageListData.push(village);
+loadVillageList();
 }
 
 
-// clear
-function clearData() {
-    localStorage.removeItem("dataList");
-    renderTable();
+data.push(row);
+saveData(data);
+
+
+document.getElementById("villageInput").value="";
+document.getElementById("weightInput").value="";
+document.getElementById("receiptInput").value="";
+document.getElementById("carInput").value="";
+
+
+renderTable();
 }
 
 
-// download
-function downloadExcel() {
-    let data = getFilteredData();
+function renderTable(){
 
 
-    if (data.length === 0) {
-        alert("No data");
-        return;
-    }
+let tbody=document.getElementById("dataList");
+tbody.innerHTML="";
 
 
-    let ws = XLSX.utils.aoa_to_sheet([
-        ["Date","Village","Weight","Receipt","Car"],
-        ...data
-    ]);
+let filtered=getFilteredData();
 
 
-    let wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Data");
-    XLSX.writeFile(wb, "data.xlsx");
+filtered.forEach((row,index)=>{
+
+
+let tr=document.createElement("tr");
+
+
+row.forEach(cell=>{
+let td=document.createElement("td");
+td.textContent=cell;
+tr.appendChild(td);
+});
+
+
+let action=document.createElement("td");
+
+
+action.innerHTML=`
+<button onclick="editRow(${index})">
+Edit
+</button>
+
+
+<button onclick="deleteRow(${index})">
+Delete
+</button>
+`;
+
+
+tr.appendChild(action);
+tbody.appendChild(tr);
+
+
+});
+
+
+updateTotal();
+
+
 }
+
+
+function updateTotal(){
+
+
+let all=getData();
+let filtered=getFilteredData();
+
+
+let totalAll=all.reduce(
+(sum,row)=>sum+(parseFloat(row[2])||0),
+0
+);
+
+
+let totalFiltered=filtered.reduce(
+(sum,row)=>sum+(parseFloat(row[2])||0),
+0
+);
+
+
+document.getElementById("totalAll").textContent=
+totalAll;
+
+
+document.getElementById("totalFiltered").textContent=
+totalFiltered+
+" | Entries: "+
+filtered.length;
+
+
+}
+
+
+function editRow(index){
+
+
+verifyPassword(()=>{
+
+
+let filtered=getFilteredData();
+let data=getData();
+
+
+let row=filtered[index];
+
+
+let realIndex=data.findIndex(
+r=>JSON.stringify(r)===JSON.stringify(row)
+);
+
+
+let tr=document
+.getElementById("dataList")
+.children[index];
+
+
+tr.innerHTML="";
+
+
+row.forEach(cell=>{
+let td=document.createElement("td");
+td.innerHTML=`<input value="${cell}">`;
+tr.appendChild(td);
+});
+
+
+let action=document.createElement("td");
+
+
+action.innerHTML=`
+<button onclick="saveEdit(${realIndex})">
+Save
+</button>
+
+
+<button onclick="renderTable()">
+Cancel
+</button>
+`;
+
+
+tr.appendChild(action);
+
+
+});
+
+
+}
+
+
+function saveEdit(index){
+
+
+let inputs=document.querySelectorAll(
+"#dataList tr input"
+);
+
+
+let newRow=[
+inputs[0].value,
+inputs[1].value.toUpperCase(),
+inputs[2].value,
+inputs[3].value,
+inputs[4].value.toUpperCase()
+];
+
+
+let data=getData();
+
+
+if(data.some(
+(r,i)=>r[3]===newRow[3] && i!==index
+)){
+alert("Duplicate receipt!");
+return;
+}
+
+
+data[index]=newRow;
+saveData(data);
+
+
+renderTable();
+
+
+}
+
+
+function deleteRow(index){
+
+
+verifyPassword(()=>{
+
+
+let filtered=getFilteredData();
+let data=getData();
+
+
+let row=filtered[index];
+
+
+let realIndex=data.findIndex(
+r=>JSON.stringify(r)===JSON.stringify(row)
+);
+
+
+data.splice(realIndex,1);
+
+
+saveData(data);
+renderTable();
+
+
+});
+
+
+}
+
+
+function verifyPassword(cb){
+let p=prompt("Enter password:");
+
+
+if(p===PASSWORD){
+cb();
+}else{
+alert("Wrong password");
+}
+}
+
+
+function clearData(){
+localStorage.removeItem("dataList");
+renderTable();
+}
+
+
+function downloadExcel(){
+
+
+let rows=getFilteredData();
+
+
+if(rows.length===0){
+alert("No data");
+return;
+}
+
+
+let ws=XLSX.utils.aoa_to_sheet([
+["Date","Village","Weight","Receipt","Car"],
+...rows
+]);
+
+
+let wb=XLSX.utils.book_new();
+
+
+XLSX.utils.book_append_sheet(
+wb,
+ws,
+"Data"
+);
+
+
+XLSX.writeFile(
+wb,
+"data.xlsx"
+);
+
+
+}
+
+
 </script>
 
 
