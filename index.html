@@ -1,0 +1,343 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<title>Advanced Data Entry</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>
+
+
+<style>
+body { font-family: Arial; text-align: center; margin: 20px; }
+input, button { padding: 10px; margin: 5px; text-transform: uppercase; }
+.table-container { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; min-width: 700px; }
+th, td { border: 1px solid black; padding: 8px; }
+th { background: #f4f4f4; }
+.total-box { margin-top: 10px; font-weight: bold; }
+</style>
+</head>
+
+
+<body>
+
+
+<h2>Data Entry</h2>
+
+
+<input type="date" id="dateInput">
+
+
+<input list="villageList" id="villageInput" placeholder="Village">
+<datalist id="villageList"></datalist>
+
+
+<input type="number" id="weightInput" placeholder="Weight">
+<input type="number" id="receiptInput" placeholder="Receipt No">
+
+
+<input list="carList" id="carInput" placeholder="Car No">
+<datalist id="carList">
+<option value="GJ12BX1269">
+<option value="GJ12BZ1269">
+</datalist>
+
+
+<br>
+
+
+<button onclick="addData()">Add</button>
+<button onclick="verifyPassword(clearData)">Clear All</button>
+<button onclick="downloadExcel()">Download Excel</button>
+
+
+<br><br>
+
+
+<input type="text" id="searchInput" placeholder="Search..." onkeyup="renderTable()">
+<input type="date" id="fromDate" onchange="renderTable()">
+<input type="date" id="toDate" onchange="renderTable()">
+
+
+<div class="total-box">
+Total (All): <span id="totalAll">0</span> |
+Total (Filtered): <span id="totalFiltered">0</span>
+</div>
+
+
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Village</th>
+<th>Weight</th>
+<th>Receipt</th>
+<th>Car</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody id="dataList"></tbody>
+</table>
+</div>
+
+
+<script>
+const PASSWORD = "samra3532";
+
+
+// base village order
+const villageOrder = [
+"MUNDRA","SADAU","KAPAYA","BAROI","VANDH",
+"GOYAR","SHEKHADIYA","LUNI","RAGA",
+"HAMIRAMORA","MANGRA","BORANA"
+];
+
+
+// dynamic list for dropdown
+let villageListData = [...villageOrder];
+
+
+// load village dropdown
+function loadVillageList() {
+    let list = document.getElementById("villageList");
+    list.innerHTML = "";
+    villageListData.forEach(v => {
+        let opt = document.createElement("option");
+        opt.value = v;
+        list.appendChild(opt);
+    });
+}
+
+
+// date
+function getToday() {
+    let d = new Date();
+    return d.toISOString().split('T')[0];
+}
+
+
+window.onload = () => {
+    let today = getToday();
+    dateInput.value = today;
+    fromDate.value = today;
+    toDate.value = today;
+    loadVillageList();
+    renderTable();
+};
+
+
+function getData() {
+    return JSON.parse(localStorage.getItem("dataList")) || [];
+}
+
+
+function saveData(data) {
+    localStorage.setItem("dataList", JSON.stringify(data));
+}
+
+
+// sort logic
+function sortData(data) {
+    return data.sort((a,b) => {
+        if (a[0] !== b[0]) return a[0].localeCompare(b[0]);
+
+
+        let vA = villageOrder.indexOf(a[1]);
+        let vB = villageOrder.indexOf(b[1]);
+
+
+        if (vA === -1) vA = 999;
+        if (vB === -1) vB = 999;
+
+
+        if (vA !== vB) return vA - vB;
+
+
+        return Number(a[3]) - Number(b[3]);
+    });
+}
+
+
+// filter
+function getFilteredData() {
+    let data = sortData(getData());
+
+
+    let search = searchInput.value.toLowerCase();
+    let from = fromDate.value;
+    let to = toDate.value;
+
+
+    return data.filter(row => {
+        let text = row.join(" ").toLowerCase();
+
+
+        if (search && !text.includes(search)) return false;
+        if (from && row[0] < from) return false;
+        if (to && row[0] > to) return false;
+
+
+        return true;
+    });
+}
+
+
+// add
+function addData() {
+    let data = getData();
+
+
+    let village = villageInput.value.toUpperCase();
+
+
+    let row = [
+        dateInput.value,
+        village,
+        weightInput.value,
+        receiptInput.value,
+        carInput.value.toUpperCase()
+    ];
+
+
+    if (row.some(v => !v)) {
+        alert("All fields required");
+        return;
+    }
+
+
+    if (data.some(r => r[3] === row[3])) {
+        alert("Duplicate receipt!");
+        return;
+    }
+
+
+    // add new village at end
+    if (!villageListData.includes(village)) {
+        villageListData.push(village);
+        loadVillageList();
+    }
+
+
+    data.push(row);
+    saveData(data);
+
+
+    villageInput.value = "";
+    weightInput.value = "";
+    receiptInput.value = "";
+    carInput.value = "";
+
+
+    renderTable();
+}
+
+
+// render
+function renderTable() {
+    let table = dataList;
+    table.innerHTML = "";
+
+
+    let filtered = getFilteredData();
+
+
+    filtered.forEach((row,index) => {
+        let tr = document.createElement("tr");
+
+
+        row.forEach(cell => {
+            let td = document.createElement("td");
+            td.textContent = cell;
+            tr.appendChild(td);
+        });
+
+
+        let action = document.createElement("td");
+        action.innerHTML = `
+            <button onclick="editRow(${index})">Edit</button>
+            <button onclick="deleteRow(${index})">Delete</button>
+        `;
+        tr.appendChild(action);
+
+
+        table.appendChild(tr);
+    });
+
+
+    updateTotal();
+}
+
+
+// totals
+function updateTotal() {
+    let all = getData();
+    let filtered = getFilteredData();
+
+
+    let totalAll = all.reduce((s,r)=>s+Number(r[2]||0),0);
+    let totalFiltered = filtered.reduce((s,r)=>s+Number(r[2]||0),0);
+
+
+    totalAllEl.innerText = totalAll;
+    totalFilteredEl.innerText = totalFiltered + " | Entries: " + filtered.length;
+}
+
+
+// delete
+function deleteRow(index) {
+    verifyPassword(() => {
+        let filtered = getFilteredData();
+        let data = getData();
+
+
+        let row = filtered[index];
+        let realIndex = data.findIndex(r => JSON.stringify(r) === JSON.stringify(row));
+
+
+        data.splice(realIndex,1);
+        saveData(data);
+        renderTable();
+    });
+}
+
+
+// password
+function verifyPassword(cb) {
+    let p = prompt("Enter password:");
+    if (p === PASSWORD) cb();
+    else alert("Wrong password");
+}
+
+
+// clear
+function clearData() {
+    localStorage.removeItem("dataList");
+    renderTable();
+}
+
+
+// download
+function downloadExcel() {
+    let data = getFilteredData();
+
+
+    if (data.length === 0) {
+        alert("No data");
+        return;
+    }
+
+
+    let ws = XLSX.utils.aoa_to_sheet([
+        ["Date","Village","Weight","Receipt","Car"],
+        ...data
+    ]);
+
+
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data");
+    XLSX.writeFile(wb, "data.xlsx");
+}
+</script>
+
+
+</body>
+</html>
