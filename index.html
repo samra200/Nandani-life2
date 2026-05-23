@@ -1,7 +1,9 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-<title>Advanced Data Entry</title>
+<title>Project 2 Data Entry</title>
+
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>
 
 
@@ -27,9 +29,9 @@ overflow-x:auto;
 
 table{
 width:100%;
-min-width:700px;
 border-collapse:collapse;
 margin-top:20px;
+min-width:900px;
 }
 
 
@@ -45,7 +47,7 @@ background:#f4f4f4;
 
 
 .total-box{
-margin-top:12px;
+margin-top:10px;
 font-weight:bold;
 }
 
@@ -57,13 +59,22 @@ width:90%;
 }
 </style>
 </head>
+
+
 <body>
 
 
-<h2>Data Entry</h2>
+<h2>Project 2 Data Entry</h2>
 
 
 <input type="date" id="dateInput">
+
+
+<input list="sellerList" id="sellerInput" placeholder="Seller">
+<datalist id="sellerList">
+<option value="MUNNA BHAI">
+<option value="CHETAN BHAI">
+</datalist>
 
 
 <input list="villageList" id="villageInput" placeholder="Village">
@@ -71,14 +82,13 @@ width:90%;
 
 
 <input type="number" id="weightInput" placeholder="Weight">
+
+
 <input type="number" id="receiptInput" placeholder="Receipt No">
 
 
 <input list="carList" id="carInput" placeholder="Car No">
-<datalist id="carList">
-<option value="GJ12BX1269">
-<option value="GJ12BZ1269">
-</datalist>
+<datalist id="carList"></datalist>
 
 
 <br>
@@ -94,7 +104,7 @@ width:90%;
 
 <input type="text"
 id="searchInput"
-placeholder="Search..."
+placeholder="Search or use #word to exclude"
 onkeyup="renderTable()">
 
 
@@ -122,6 +132,7 @@ Total (Filtered):
 <thead>
 <tr>
 <th>Date</th>
+<th>Seller</th>
 <th>Village</th>
 <th>Weight</th>
 <th>Receipt</th>
@@ -129,6 +140,8 @@ Total (Filtered):
 <th>Action</th>
 </tr>
 </thead>
+
+
 <tbody id="dataList"></tbody>
 </table>
 </div>
@@ -137,7 +150,8 @@ Total (Filtered):
 <script>
 
 
-const PASSWORD="samra3532";
+const STORAGE_KEY="project2Data";
+const PASSWORD="3532";
 
 
 const villageOrder=[
@@ -160,6 +174,8 @@ let villageListData=[...villageOrder];
 
 
 function loadVillageList(){
+
+
 let list=document.getElementById("villageList");
 list.innerHTML="";
 
@@ -169,44 +185,66 @@ let opt=document.createElement("option");
 opt.value=v;
 list.appendChild(opt);
 });
+
+
 }
 
 
 function getToday(){
+
+
 let d=new Date();
 let y=d.getFullYear();
 let m=String(d.getMonth()+1).padStart(2,'0');
 let day=String(d.getDate()).padStart(2,'0');
+
+
 return `${y}-${m}-${day}`;
+
+
 }
 
 
 window.onload=function(){
+
+
 let today=getToday();
 
 
-document.getElementById("dateInput").value=today;
-document.getElementById("fromDate").value=today;
-document.getElementById("toDate").value=today;
+dateInput.value=today;
+fromDate.value=today;
+toDate.value=today;
 
 
 loadVillageList();
+
+
 renderTable();
+
+
 };
 
 
 function getData(){
+
+
 return JSON.parse(
-localStorage.getItem("dataList")
+localStorage.getItem(STORAGE_KEY)
 )||[];
+
+
 }
 
 
 function saveData(data){
+
+
 localStorage.setItem(
-"dataList",
+STORAGE_KEY,
 JSON.stringify(data)
 );
+
+
 }
 
 
@@ -221,8 +259,8 @@ return a[0].localeCompare(b[0]);
 }
 
 
-let va=villageOrder.indexOf(a[1]);
-let vb=villageOrder.indexOf(b[1]);
+let va=villageOrder.indexOf(a[2]);
+let vb=villageOrder.indexOf(b[2]);
 
 
 if(va===-1) va=999;
@@ -234,10 +272,12 @@ return va-vb;
 }
 
 
-return Number(a[3])-Number(b[3]);
+return Number(a[4]||0)-Number(b[4]||0);
 
 
 });
+
+
 }
 
 
@@ -250,17 +290,21 @@ let data=sortData(getData());
 let search=document
 .getElementById("searchInput")
 .value
-.toLowerCase();
+.toLowerCase()
+.trim();
 
 
-let from=document
-.getElementById("fromDate")
-.value;
+let from=fromDate.value;
+let to=toDate.value;
 
 
-let to=document
-.getElementById("toDate")
-.value;
+let words=search.split(" ").filter(Boolean);
+
+
+let includeWords=words.filter(w=>!w.startsWith("#"));
+let excludeWords=words
+.filter(w=>w.startsWith("#"))
+.map(w=>w.substring(1));
 
 
 return data.filter(row=>{
@@ -269,15 +313,25 @@ return data.filter(row=>{
 let text=row.join(" ").toLowerCase();
 
 
-if(search && !text.includes(search))
+for(let word of includeWords){
+if(!text.includes(word)){
+return false;
+}
+}
+
+
+for(let word of excludeWords){
+if(text.includes(word)){
+return false;
+}
+}
+
+
+if(from && row[0]<from)
 return false;
 
 
-if(from && row[0] < from)
-return false;
-
-
-if(to && row[0] > to)
+if(to && row[0]>to)
 return false;
 
 
@@ -296,50 +350,63 @@ function addData(){
 let data=getData();
 
 
-let village=document
-.getElementById("villageInput")
-.value
-.toUpperCase();
+let seller=sellerInput.value.toUpperCase();
+let village=villageInput.value.toUpperCase();
+let weight=weightInput.value;
+let receipt=receiptInput.value;
+let car=carInput.value.toUpperCase();
 
 
-let row=[
-document.getElementById("dateInput").value,
-village,
-document.getElementById("weightInput").value,
-document.getElementById("receiptInput").value,
-document.getElementById("carInput").value.toUpperCase()
-];
-
-
-if(row.some(v=>!v)){
-alert("All fields required");
+if(!dateInput.value || !seller || !weight){
+alert("Date, Seller and Weight required");
 return;
 }
 
 
-if(data.some(r=>r[3]===row[3])){
+if(receipt){
+
+
+if(data.some(r=>r[4]===receipt)){
 alert("Duplicate receipt!");
 return;
 }
 
 
-if(!villageListData.includes(village)){
+}
+
+
+if(village && !villageListData.includes(village)){
 villageListData.push(village);
 loadVillageList();
 }
 
 
+let row=[
+dateInput.value,
+seller,
+village,
+weight,
+receipt,
+car
+];
+
+
 data.push(row);
+
+
 saveData(data);
 
 
-document.getElementById("villageInput").value="";
-document.getElementById("weightInput").value="";
-document.getElementById("receiptInput").value="";
-document.getElementById("carInput").value="";
+sellerInput.value="";
+villageInput.value="";
+weightInput.value="";
+receiptInput.value="";
+carInput.value="";
 
 
 renderTable();
+
+
 }
 
 
@@ -347,6 +414,8 @@ function renderTable(){
 
 
 let tbody=document.getElementById("dataList");
+
+
 tbody.innerHTML="";
 
 
@@ -360,9 +429,13 @@ let tr=document.createElement("tr");
 
 
 row.forEach(cell=>{
+
+
 let td=document.createElement("td");
 td.textContent=cell;
 tr.appendChild(td);
+
+
 });
 
 
@@ -370,11 +443,6 @@ let action=document.createElement("td");
 
 
 action.innerHTML=`
-<button onclick="editRow(${index})">
-Edit
-</button>
-
-
 <button onclick="deleteRow(${index})">
 Delete
 </button>
@@ -382,6 +450,8 @@ Delete
 
 
 tr.appendChild(action);
+
+
 tbody.appendChild(tr);
 
 
@@ -402,13 +472,13 @@ let filtered=getFilteredData();
 
 
 let totalAll=all.reduce(
-(sum,row)=>sum+(parseFloat(row[2])||0),
+(sum,row)=>sum+(parseFloat(row[3])||0),
 0
 );
 
 
 let totalFiltered=filtered.reduce(
-(sum,row)=>sum+(parseFloat(row[2])||0),
+(sum,row)=>sum+(parseFloat(row[3])||0),
 0
 );
 
@@ -426,101 +496,6 @@ filtered.length;
 }
 
 
-function editRow(index){
-
-
-verifyPassword(()=>{
-
-
-let filtered=getFilteredData();
-let data=getData();
-
-
-let row=filtered[index];
-
-
-let realIndex=data.findIndex(
-r=>JSON.stringify(r)===JSON.stringify(row)
-);
-
-
-let tr=document
-.getElementById("dataList")
-.children[index];
-
-
-tr.innerHTML="";
-
-
-row.forEach(cell=>{
-let td=document.createElement("td");
-td.innerHTML=`<input value="${cell}">`;
-tr.appendChild(td);
-});
-
-
-let action=document.createElement("td");
-
-
-action.innerHTML=`
-<button onclick="saveEdit(${realIndex})">
-Save
-</button>
-
-
-<button onclick="renderTable()">
-Cancel
-</button>
-`;
-
-
-tr.appendChild(action);
-
-
-});
-
-
-}
-
-
-function saveEdit(index){
-
-
-let inputs=document.querySelectorAll(
-"#dataList tr input"
-);
-
-
-let newRow=[
-inputs[0].value,
-inputs[1].value.toUpperCase(),
-inputs[2].value,
-inputs[3].value,
-inputs[4].value.toUpperCase()
-];
-
-
-let data=getData();
-
-
-if(data.some(
-(r,i)=>r[3]===newRow[3] && i!==index
-)){
-alert("Duplicate receipt!");
-return;
-}
-
-
-data[index]=newRow;
-saveData(data);
-
-
-renderTable();
-
-
-}
-
-
 function deleteRow(index){
 
 
@@ -528,6 +503,8 @@ verifyPassword(()=>{
 
 
 let filtered=getFilteredData();
+
+
 let data=getData();
 
 
@@ -543,6 +520,8 @@ data.splice(realIndex,1);
 
 
 saveData(data);
+
+
 renderTable();
 
 
@@ -553,6 +532,8 @@ renderTable();
 
 
 function verifyPassword(cb){
+
+
 let p=prompt("Enter password:");
 
 
@@ -561,12 +542,20 @@ cb();
 }else{
 alert("Wrong password");
 }
+
+
 }
 
 
 function clearData(){
-localStorage.removeItem("dataList");
+
+
+localStorage.removeItem(STORAGE_KEY);
+
+
 renderTable();
+
+
 }
 
 
@@ -583,7 +572,7 @@ return;
 
 
 let ws=XLSX.utils.aoa_to_sheet([
-["Date","Village","Weight","Receipt","Car"],
+["Date","Seller","Village","Weight","Receipt","Car"],
 ...rows
 ]);
 
@@ -600,7 +589,7 @@ ws,
 
 XLSX.writeFile(
 wb,
-"data.xlsx"
+"project2_data.xlsx"
 );
 
 
